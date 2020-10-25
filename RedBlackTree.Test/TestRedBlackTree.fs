@@ -1,5 +1,6 @@
 namespace RedBlackTree.Test
 
+open System.Collections.Generic
 open RedBlackTree
 open NUnit.Framework
 open FsUnitTyped
@@ -25,16 +26,24 @@ module TestRedBlackTree =
         |> List.rev
         |> shouldEqual (Set.ofList l |> Set.toList)
 
-    [<TestCase 9>]
+    [<TestCase 10>]
     let ``Exhaustive test`` (n : int) =
-        for perm in Permutations.all [1..n] do
-            let rbt =
+        let expected = [1..n] |> List.rev
+        let collected =
+            Permutations.choose [1..n] 5
+            |> Seq.collect (fun (s, rest) -> Permutations.all s |> Seq.map (fun r -> r, rest))
+        for perm, rest in collected do
+            let baseRbt =
                 perm
                 |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
-            if rbt |> RedBlackTree.toListRev |> List.map fst |> List.rev <> [1..n] then failwithf "Correctness error: %+A produced %+A" perm rbt
-            let balance = RedBlackTree.balanceFactor rbt
-            if balance.Longest >= balance.Shortest * 2 then
-                failwithf "Unbalanced! %+A produced %+A (balance: %+A)"  perm rbt balance
+            for perm2 in Permutations.all rest do
+                let rbt =
+                    perm2
+                    |> List.fold (fun tree i -> RedBlackTree.add i () tree) baseRbt
+                if rbt |> RedBlackTree.toListRev |> List.map fst <> expected then failwithf "Correctness error: %+A produced %+A" perm rbt
+                let balance = RedBlackTree.balanceFactor rbt
+                if balance.Longest >= balance.Shortest * 2 then
+                    failwithf "Unbalanced! %+A produced %+A (balance: %+A)"  perm rbt balance
 
     [<Test>]
     let ``Property-based test`` () =

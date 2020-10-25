@@ -19,3 +19,12 @@ module Permutations =
         | x1 :: xs ->
             all xs |> Seq.collect (insertions x1)
 
+    let rec choose (xs : 'a list) (n : int) : ('a list * 'a list) seq =
+        if n = 0 then Seq.singleton ([], xs) else
+        match xs with
+        | [] -> Seq.empty
+        | x :: xs ->
+            seq {
+                yield! choose xs (n - 1) |> Seq.map (fun (i, rest) -> (x :: i, rest))
+                yield! choose xs n |> Seq.map (fun (i, rest) -> i, x :: rest)
+            }

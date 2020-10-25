@@ -7,7 +7,7 @@ type 'a Succ = private | Succ
 type ValueAtDepth<'a, 'depth> = ValueAtDepth of 'a
 
 [<RequireQualifiedAccess>]
-module ValueAtDepth =
+module internal ValueAtDepth =
     let inline value (ValueAtDepth a) = a
 
     let inline elevate<'a, 'depth> (ValueAtDepth a : ValueAtDepth<'a, 'depth>) : ValueAtDepth<'a, Succ<'depth>> =
@@ -16,9 +16,9 @@ module ValueAtDepth =
     let inline collapse<'a, 'depth> (ValueAtDepth a : ValueAtDepth<'a, Succ<'depth>>) : ValueAtDepth<'a, 'depth> =
         ValueAtDepth a
 
-type RedNode<'a, 'v, 'depth when 'a : comparison> = RedNode of BlackNode<'a, 'v, 'depth> * BlackNode<'a, 'v, 'depth> * ValueAtDepth<'a * 'v, 'depth>
+type private RedNode<'a, 'v, 'depth when 'a : comparison> = RedNode of BlackNode<'a, 'v, 'depth> * BlackNode<'a, 'v, 'depth> * ValueAtDepth<'a * 'v, 'depth>
 
-and [<RequireQualifiedAccess>] BlackNode<'a, 'v, 'depth when 'a : comparison> =
+and [<RequireQualifiedAccess>] private BlackNode<'a, 'v, 'depth when 'a : comparison> =
     | Leaf
     | RedRedNode of RedNode<'a, 'v, Succ<'depth>> * RedNode<'a, 'v, Succ<'depth>> * ValueAtDepth<'a * 'v, 'depth>
     | RedBlackNode of RedNode<'a, 'v, Succ<'depth>> * BlackNode<'a, 'v, Succ<'depth>> * ValueAtDepth<'a * 'v, 'depth>
