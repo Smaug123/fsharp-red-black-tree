@@ -8,26 +8,31 @@ open FsCheck
 [<TestFixture>]
 module TestRedBlackTree =
 
-    [<Test>]
-    let ``First`` () =
-        [0 ; 1]
+    let propertyCases =
+        [
+            [0 ; 1]
+            [2 ; -1 ; 1 ; 0]
+            [3 ; 0 ; -1 ; 2 ; 1]
+        ]
+        |> List.map TestCaseData
+
+    [<TestCaseSource "propertyCases">]
+    let ``Examples found by property-based testing`` (l : int list) =
+        l
         |> List.fold RedBlackTree.add RedBlackTree.empty
         |> RedBlackTree.toList
-        |> shouldEqual (Set.ofList [0 ; 1] |> Set.toList)
+        |> shouldEqual (Set.ofList l |> Set.toList)
 
-    [<Test>]
-    let ``Second`` () =
-        [2 ; -1 ; 1 ; 0]
-        |> List.fold RedBlackTree.add RedBlackTree.empty
-        |> RedBlackTree.toList
-        |> shouldEqual (Set.ofList [2 ; -1 ; 1 ; 0] |> Set.toList)
-
-    [<Test>]
-    let ``Third`` () =
-        [3 ; 0 ; -1 ; 2 ; 1]
-        |> List.fold (RedBlackTree.add) RedBlackTree.empty
-        |> RedBlackTree.toList
-        |> shouldEqual (Set.ofList [-1 ; 0 ; 1 ; 2 ; 3] |> Set.toList)
+    [<TestCase 11>]
+    let ``Exhaustive test`` (n : int) =
+        for perm in Permutations.all [1..n] do
+            let rbt =
+                perm
+                |> List.fold RedBlackTree.add RedBlackTree.empty
+            if rbt |> RedBlackTree.toList <> [1..n] then failwithf "Correctness error: %+A produced %+A" perm rbt
+            let balance = RedBlackTree.balanceFactor rbt
+            if balance.Longest >= balance.Shortest * 2 then
+                failwithf "Unbalanced! %+A produced %+A (balance: %+A)"  perm rbt balance
 
     [<Test>]
     let ``Property-based test`` () =

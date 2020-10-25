@@ -13,7 +13,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="Permutations.fs" />
         <Compile Include="TestRedBlackTree.fs" />
+        <Compile Include="TestPermutations.fs" />
     </ItemGroup>
 
     <ItemGroup>

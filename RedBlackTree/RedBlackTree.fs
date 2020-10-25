@@ -60,6 +60,7 @@ module BlackNodeCrate =
 [<RequireQualifiedAccess>]
 module RedBlackTree =
 
+    /// A red-black tree holding no data.
     let empty<'a when 'a : comparison> : RedBlackTree<'a> = RedBlackTree.BlackRoot (BlackNode.Leaf)
 
     let rec private elevateBlack<'a, 'depth when 'a : comparison>
@@ -253,11 +254,11 @@ module RedBlackTree =
         | AdditionResult.Black node -> RedBlackTree.BlackRoot node
         | AdditionResult.Red node -> RedBlackTree.RedRoot node
         | AdditionResult.NeedsRebalance info ->
-            RedNode
-                (BlackNode.BlackBlackNode (elevateBlack info.Left, elevateBlack info.Middle, info.Lower),
-                 info.Right,
+            BlackNode.RedBlackNode
+                (RedNode.RedNode (elevateBlack info.Left, elevateBlack info.Middle, ValueAtDepth.elevate info.Lower),
+                 elevateBlack info.Right,
                  info.Upper)
-            |> RedBlackTree.RedRoot
+            |> RedBlackTree.BlackRoot
 
     let rec private findBlack<'a, 'depth when 'a : comparison>
         (tree : BlackNode<'a, 'depth>)
@@ -363,3 +364,39 @@ module RedBlackTree =
 
     let toList<'a when 'a : comparison> (tree : RedBlackTree<'a>) : 'a list =
         fold (fun ls a -> a :: ls) [] tree |> List.rev
+
+    let rec private balanceFactorBlack<'a, 'depth when 'a : comparison> (node : BlackNode<'a, 'depth>) : int * int =
+        match node with
+        | BlackNode.Leaf -> 0, 0
+        | BlackNode.BlackBlackNode (left, right, _) ->
+            let (min1, max1) = balanceFactorBlack left
+            let (min2, max2) = balanceFactorBlack right
+            (min min1 min2, max max1 max2)
+        | BlackNode.BlackRedNode (left, right, _) ->
+            let (min1, max1) = balanceFactorBlack left
+            let (min2, max2) = balanceFactorRed right
+            (min min1 min2, max max1 max2)
+        | BlackNode.RedBlackNode (left, right, _) ->
+            let (min1, max1) = balanceFactorRed left
+            let (min2, max2) = balanceFactorBlack right
+            (min min1 min2, max max1 max2)
+        | BlackNode.RedRedNode (left, right, _) ->
+            let (min1, max1) = balanceFactorRed left
+            let (min2, max2) = balanceFactorRed right
+            (min min1 min2, max max1 max2)
+        |> fun (a, b) -> (a + 1, b + 1)
+
+    and private balanceFactorRed<'a, 'depth when 'a : comparison> (node : RedNode<'a, 'depth>) : int * int =
+        match node with
+        | RedNode (left, right, _) ->
+            let (min1, max1) = balanceFactorBlack left
+            let (min2, max2) = balanceFactorBlack right
+            (min min1 min2, max max1 max2)
+        |> fun (a, b) -> (a + 1, b + 1)
+
+    /// Answer the question: how long is the longest path through the graph, and the shortest?
+    let balanceFactor<'a when 'a : comparison> (tree : RedBlackTree<'a>) : {| Longest : int ; Shortest : int |} =
+        match tree with
+        | RedBlackTree.RedRoot red -> balanceFactorRed red
+        | RedBlackTree.BlackRoot black -> balanceFactorBlack black
+        |> fun (short, long) -> {| Shortest = short ; Longest = long |}
