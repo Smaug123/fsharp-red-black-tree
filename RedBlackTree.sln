@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RedBlackTree", "RedBlackTree\RedBlackTree.fsproj", "{76DD0221-151E-42B5-A6A6-5502C385EEA6}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RedBlackTree.Test", "RedBlackTree.Test\RedBlackTree.Test.fsproj", "{43679A30-8C91-471C-9C97-548866754008}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{76DD0221-151E-42B5-A6A6-5502C385EEA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76DD0221-151E-42B5-A6A6-5502C385EEA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76DD0221-151E-42B5-A6A6-5502C385EEA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76DD0221-151E-42B5-A6A6-5502C385EEA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43679A30-8C91-471C-9C97-548866754008}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43679A30-8C91-471C-9C97-548866754008}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43679A30-8C91-471C-9C97-548866754008}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43679A30-8C91-471C-9C97-548866754008}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
