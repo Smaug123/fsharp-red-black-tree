@@ -16,8 +16,8 @@ module RSet =
         | Some _ -> true
         | None -> false
 
-    let toList<'a when 'a : comparison> (RSet s : RSet<'a>) : 'a list =
-        RedBlackTree.toList s
+    let toListRev<'a when 'a : comparison> (RSet s : RSet<'a>) : 'a list =
+        RedBlackTree.toListRev s
         |> List.map fst
 
     let toSeq<'a when 'a : comparison> (RSet s : RSet<'a>) : 'a seq =

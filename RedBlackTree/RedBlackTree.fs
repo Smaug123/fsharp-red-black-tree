@@ -338,12 +338,46 @@ module RedBlackTree =
         | RedBlackTree.RedRoot root -> foldRed folder state root
         | RedBlackTree.BlackRoot root -> foldBlack folder state root
 
-    /// Convert the tree to a list, in sorted order.
-    let toList<'a, 'v when 'a : comparison> (tree : RedBlackTree<'a, 'v>) : ('a * 'v) list =
-        fold (fun ls a -> a :: ls) [] tree |> List.rev
+    /// Convert the tree to a list, in reverse sorted order.
+    let toListRev<'a, 'v when 'a : comparison> (tree : RedBlackTree<'a, 'v>) : ('a * 'v) list =
+        fold (fun ls a -> a :: ls) [] tree
+
+    let rec private toSeqBlack<'a, 'v, 'depth when 'a : comparison> (tree : BlackNode<'a, 'v, 'depth>) : ('a * 'v) seq =
+        seq {
+            match tree with
+            | BlackNode.Leaf ->
+                ()
+            | BlackNode.BlackBlackNode (left, right, value) ->
+                yield! toSeqBlack left
+                yield (ValueAtDepth.value value)
+                yield! toSeqBlack right
+            | BlackNode.BlackRedNode (left, right, value) ->
+                yield! toSeqBlack left
+                yield (ValueAtDepth.value value)
+                yield! toSeqRed right
+            | BlackNode.RedBlackNode (left, right, value) ->
+                yield! toSeqRed left
+                yield (ValueAtDepth.value value)
+                yield! toSeqBlack right
+            | BlackNode.RedRedNode (left, right, value) ->
+                yield! toSeqRed left
+                yield (ValueAtDepth.value value)
+                yield! toSeqRed right
+        }
+
+    and private toSeqRed<'a, 'v, 'depth when 'a : comparison> (tree : RedNode<'a, 'v, 'depth>) : ('a * 'v) seq =
+        seq {
+            match tree with
+            | RedNode.RedNode (left, right, value) ->
+                yield! toSeqBlack left
+                yield (ValueAtDepth.value value)
+                yield! toSeqBlack right
+        }
 
     let toSeq<'a, 'v when 'a : comparison> (tree : RedBlackTree<'a, 'v>) : ('a * 'v) seq =
-        fold (fun ls a -> seq { yield! ls ; yield a }) Seq.empty tree
+        match tree with
+        | RedBlackTree.RedRoot root -> toSeqRed root
+        | RedBlackTree.BlackRoot root -> toSeqBlack root
 
     let rec private balanceFactorBlack<'a, 'v, 'depth when 'a : comparison> (node : BlackNode<'a, 'v, 'depth>) : int * int =
         match node with

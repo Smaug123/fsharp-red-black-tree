@@ -20,8 +20,9 @@ module TestRedBlackTree =
     let ``Examples found by property-based testing`` (l : int list) =
         l
         |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
-        |> RedBlackTree.toList
+        |> RedBlackTree.toListRev
         |> List.map fst
+        |> List.rev
         |> shouldEqual (Set.ofList l |> Set.toList)
 
     [<TestCase 9>]
@@ -30,7 +31,7 @@ module TestRedBlackTree =
             let rbt =
                 perm
                 |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
-            if rbt |> RedBlackTree.toList |> List.map fst <> [1..n] then failwithf "Correctness error: %+A produced %+A" perm rbt
+            if rbt |> RedBlackTree.toListRev |> List.map fst |> List.rev <> [1..n] then failwithf "Correctness error: %+A produced %+A" perm rbt
             let balance = RedBlackTree.balanceFactor rbt
             if balance.Longest >= balance.Shortest * 2 then
                 failwithf "Unbalanced! %+A produced %+A (balance: %+A)"  perm rbt balance
@@ -40,9 +41,24 @@ module TestRedBlackTree =
         let property (list : int list) =
             list
             |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
-            |> RedBlackTree.toList
+            |> RedBlackTree.toListRev
             |> List.map fst
+            |> List.rev
             |> shouldEqual (Set.ofList list |> Set.toList)
+
+        let config = { Config.Default with MaxTest = 10000 }
+        Check.One(config, property)
+
+    [<Test>]
+    let ``toSeq vs toList`` () =
+        let property (list : int list) =
+            let rbt =
+                list
+                |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
+            rbt
+            |> RedBlackTree.toSeq
+            |> Seq.toList
+            |> shouldEqual (RedBlackTree.toListRev rbt |> List.rev)
 
         let config = { Config.Default with MaxTest = 10000 }
         Check.One(config, property)
