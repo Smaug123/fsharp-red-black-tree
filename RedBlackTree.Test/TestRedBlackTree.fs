@@ -19,17 +19,18 @@ module TestRedBlackTree =
     [<TestCaseSource "propertyCases">]
     let ``Examples found by property-based testing`` (l : int list) =
         l
-        |> List.fold RedBlackTree.add RedBlackTree.empty
+        |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
         |> RedBlackTree.toList
+        |> List.map fst
         |> shouldEqual (Set.ofList l |> Set.toList)
 
-    [<TestCase 11>]
+    [<TestCase 9>]
     let ``Exhaustive test`` (n : int) =
         for perm in Permutations.all [1..n] do
             let rbt =
                 perm
-                |> List.fold RedBlackTree.add RedBlackTree.empty
-            if rbt |> RedBlackTree.toList <> [1..n] then failwithf "Correctness error: %+A produced %+A" perm rbt
+                |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
+            if rbt |> RedBlackTree.toList |> List.map fst <> [1..n] then failwithf "Correctness error: %+A produced %+A" perm rbt
             let balance = RedBlackTree.balanceFactor rbt
             if balance.Longest >= balance.Shortest * 2 then
                 failwithf "Unbalanced! %+A produced %+A (balance: %+A)"  perm rbt balance
@@ -38,8 +39,9 @@ module TestRedBlackTree =
     let ``Property-based test`` () =
         let property (list : int list) =
             list
-            |> List.fold RedBlackTree.add RedBlackTree.empty
+            |> List.fold (fun tree i -> RedBlackTree.add i () tree) RedBlackTree.empty
             |> RedBlackTree.toList
+            |> List.map fst
             |> shouldEqual (Set.ofList list |> Set.toList)
 
         let config = { Config.Default with MaxTest = 10000 }
