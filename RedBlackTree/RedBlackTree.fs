@@ -52,7 +52,10 @@ module RedBlackTree =
         | BlackNode.BlackRedNode (left, right, value) ->
             BlackNode.BlackRedNode (elevateBlack left, elevateRed right, ValueAtDepth.elevate value)
 
-    and private elevateRed<'a, 'v, 'depth when 'a : comparison> (node : RedNode<'a, 'v, 'depth>) : RedNode<'a, 'v, Succ<'depth>> =
+    and private elevateRed<'a, 'v, 'depth when 'a : comparison>
+        (node : RedNode<'a, 'v, 'depth>)
+        : RedNode<'a, 'v, Succ<'depth>>
+        =
         match node with
         | RedNode.RedNode (left, right, value) ->
             RedNode.RedNode (elevateBlack left, elevateBlack right, ValueAtDepth.elevate value)
@@ -60,7 +63,6 @@ module RedBlackTree =
     type private AdditionRedResult<'a, 'v, 'depth when 'a : comparison> =
         | AlreadyPresent
         | Red of RedNode<'a, 'v, 'depth>
-        | Black of BlackNode<'a, 'v, 'depth>
         | NeedsRebalance of {| Upper : ValueAtDepth<'a * 'v, 'depth>
                                Lower : ValueAtDepth<'a * 'v, 'depth>
                                Left : BlackNode<'a, 'v, 'depth>
@@ -79,7 +81,8 @@ module RedBlackTree =
         : AdditionBlackResult<'a, 'v, 'depth>
         =
         match parent with
-        | BlackNode.Leaf -> AdditionBlackResult.Red (RedNode (BlackNode.Leaf, BlackNode.Leaf, ValueAtDepth (elt, value)))
+        | BlackNode.Leaf ->
+            AdditionBlackResult.Red (RedNode (BlackNode.Leaf, BlackNode.Leaf, ValueAtDepth (elt, value)))
         | BlackNode.RedRedNode (leftTop, rightTop, valueTop) ->
             if elt = fst (ValueAtDepth.value valueTop) then
                 AdditionBlackResult.AlreadyPresent
@@ -88,8 +91,6 @@ module RedBlackTree =
                 | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
                 | AdditionRedResult.Red (RedNode (left, right, value)) ->
                     AdditionBlackResult.Black (BlackNode.RedRedNode (RedNode (left, right, value), rightTop, valueTop))
-                | AdditionRedResult.Black blackNode ->
-                    AdditionBlackResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
                 | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.BlackBlackNode (info.Left, info.Middle, ValueAtDepth.collapse info.Lower),
@@ -101,8 +102,6 @@ module RedBlackTree =
                 | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
                 | AdditionRedResult.Red (RedNode (left, right, value)) ->
                     AdditionBlackResult.Black (BlackNode.RedRedNode (leftTop, RedNode (left, right, value), valueTop))
-                | AdditionRedResult.Black blackNode ->
-                    AdditionBlackResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
                 | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.RedBlackNode (leftTop, info.Left, valueTop),
@@ -124,9 +123,6 @@ module RedBlackTree =
                 | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
                 | AdditionRedResult.Red redNode ->
                     AdditionBlackResult.Black (BlackNode.BlackRedNode (leftTop, redNode, valueTop))
-                | AdditionRedResult.Black blackNode ->
-                    // TODO - we could do this as a red node if we bumped the depth
-                    AdditionBlackResult.Black (BlackNode.BlackBlackNode (leftTop, blackNode, valueTop))
                 | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.BlackBlackNode (leftTop, info.Left, valueTop),
@@ -141,8 +137,6 @@ module RedBlackTree =
                 | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
                 | AdditionRedResult.Red redNode ->
                     AdditionBlackResult.Black (BlackNode.RedBlackNode (redNode, rightTop, valueTop))
-                | AdditionRedResult.Black blackNode ->
-                    AdditionBlackResult.Black (BlackNode.BlackBlackNode (blackNode, rightTop, valueTop))
                 | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.BlackBlackNode (info.Left, info.Middle, ValueAtDepth.collapse info.Lower),
@@ -152,7 +146,8 @@ module RedBlackTree =
             else
                 match addBlack rightTop elt value with
                 | AdditionBlackResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
-                | AdditionBlackResult.Red redNode -> AdditionBlackResult.Black (BlackNode.RedRedNode (leftTop, redNode, valueTop))
+                | AdditionBlackResult.Red redNode ->
+                    AdditionBlackResult.Black (BlackNode.RedRedNode (leftTop, redNode, valueTop))
                 | AdditionBlackResult.Black blackNode ->
                     AdditionBlackResult.Black (BlackNode.RedBlackNode (leftTop, blackNode, valueTop))
         | BlackNode.BlackBlackNode (leftTop, rightTop, valueTop) ->
@@ -216,7 +211,6 @@ module RedBlackTree =
             addRed node elt value
             |> function
             | AdditionRedResult.AlreadyPresent -> tree
-            | AdditionRedResult.Black node -> RedBlackTree.BlackRoot node
             | AdditionRedResult.Red node -> RedBlackTree.RedRoot node
             | AdditionRedResult.NeedsRebalance info ->
                 BlackNode.RedBlackNode
@@ -239,47 +233,28 @@ module RedBlackTree =
         match tree with
         | BlackNode.Leaf -> None
         | BlackNode.RedRedNode (left, right, value) ->
-            if elt = fst (ValueAtDepth.value value) then
-                Some (snd (ValueAtDepth.value value))
-            elif elt < fst (ValueAtDepth.value value) then
-                tryFindRed left elt
-            else
-                tryFindRed right elt
+            if elt = fst (ValueAtDepth.value value) then Some (snd (ValueAtDepth.value value))
+            elif elt < fst (ValueAtDepth.value value) then tryFindRed left elt
+            else tryFindRed right elt
         | BlackNode.RedBlackNode (left, right, value) ->
-            if elt = fst (ValueAtDepth.value value) then
-                Some (snd (ValueAtDepth.value value))
-            elif elt < fst (ValueAtDepth.value value) then
-                tryFindRed left elt
-            else
-                tryFindBlack right elt
+            if elt = fst (ValueAtDepth.value value) then Some (snd (ValueAtDepth.value value))
+            elif elt < fst (ValueAtDepth.value value) then tryFindRed left elt
+            else tryFindBlack right elt
         | BlackNode.BlackRedNode (left, right, value) ->
-            if elt = fst (ValueAtDepth.value value) then
-                Some (snd (ValueAtDepth.value value))
-            elif elt < fst (ValueAtDepth.value value) then
-                tryFindBlack left elt
-            else
-                tryFindRed right elt
+            if elt = fst (ValueAtDepth.value value) then Some (snd (ValueAtDepth.value value))
+            elif elt < fst (ValueAtDepth.value value) then tryFindBlack left elt
+            else tryFindRed right elt
         | BlackNode.BlackBlackNode (left, right, value) ->
-            if elt = fst (ValueAtDepth.value value) then
-                Some (snd (ValueAtDepth.value value))
-            elif elt < fst (ValueAtDepth.value value) then
-                tryFindBlack left elt
-            else
-                tryFindBlack right elt
+            if elt = fst (ValueAtDepth.value value) then Some (snd (ValueAtDepth.value value))
+            elif elt < fst (ValueAtDepth.value value) then tryFindBlack left elt
+            else tryFindBlack right elt
 
-    and private tryFindRed<'a, 'v, 'depth when 'a : comparison>
-        (tree : RedNode<'a, 'v, 'depth>)
-        (elt : 'a)
-        : 'v option
-        =
+    and private tryFindRed<'a, 'v, 'depth when 'a : comparison> (tree : RedNode<'a, 'v, 'depth>) (elt : 'a) : 'v option =
         match tree with
         | RedNode (left, right, value) ->
-            if elt = fst (ValueAtDepth.value value) then
-                Some (snd (ValueAtDepth.value value))
-            elif elt < fst (ValueAtDepth.value value) then
-                tryFindBlack left elt
-            else
-                tryFindBlack right elt
+            if elt = fst (ValueAtDepth.value value) then Some (snd (ValueAtDepth.value value))
+            elif elt < fst (ValueAtDepth.value value) then tryFindBlack left elt
+            else tryFindBlack right elt
 
     let tryFind<'a, 'v when 'a : comparison> (elt : 'a) (t : RedBlackTree<'a, 'v>) : 'v option =
         match t with
@@ -340,8 +315,7 @@ module RedBlackTree =
     let rec private toSeqBlack<'a, 'v, 'depth when 'a : comparison> (tree : BlackNode<'a, 'v, 'depth>) : ('a * 'v) seq =
         seq {
             match tree with
-            | BlackNode.Leaf ->
-                ()
+            | BlackNode.Leaf -> ()
             | BlackNode.BlackBlackNode (left, right, value) ->
                 yield! toSeqBlack left
                 yield (ValueAtDepth.value value)
