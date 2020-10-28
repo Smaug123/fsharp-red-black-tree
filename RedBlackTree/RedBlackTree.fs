@@ -57,7 +57,7 @@ module RedBlackTree =
         | RedNode.RedNode (left, right, value) ->
             RedNode.RedNode (elevateBlack left, elevateBlack right, ValueAtDepth.elevate value)
 
-    type private AdditionResult<'a, 'v, 'depth when 'a : comparison> =
+    type private AdditionRedResult<'a, 'v, 'depth when 'a : comparison> =
         | AlreadyPresent
         | Red of RedNode<'a, 'v, 'depth>
         | Black of BlackNode<'a, 'v, 'depth>
@@ -67,133 +67,124 @@ module RedBlackTree =
                                Middle : BlackNode<'a, 'v, 'depth>
                                Right : BlackNode<'a, 'v, 'depth> |}
 
+    type private AdditionBlackResult<'a, 'v, 'depth when 'a : comparison> =
+        | AlreadyPresent
+        | Red of RedNode<'a, 'v, 'depth>
+        | Black of BlackNode<'a, 'v, 'depth>
+
     let rec private addBlack<'a, 'v, 'depth when 'a : comparison>
         (parent : BlackNode<'a, 'v, 'depth>)
         (elt : 'a)
         (value : 'v)
-        : AdditionResult<'a, 'v, 'depth>
+        : AdditionBlackResult<'a, 'v, 'depth>
         =
         match parent with
-        | BlackNode.Leaf -> AdditionResult.Red (RedNode (BlackNode.Leaf, BlackNode.Leaf, ValueAtDepth (elt, value)))
+        | BlackNode.Leaf -> AdditionBlackResult.Red (RedNode (BlackNode.Leaf, BlackNode.Leaf, ValueAtDepth (elt, value)))
         | BlackNode.RedRedNode (leftTop, rightTop, valueTop) ->
             if elt = fst (ValueAtDepth.value valueTop) then
-                AdditionResult.AlreadyPresent
+                AdditionBlackResult.AlreadyPresent
             elif elt < fst (ValueAtDepth.value valueTop) then
                 match addRed<'a, 'v, Succ<'depth>> leftTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red (RedNode (left, right, value)) ->
-                    AdditionResult.Black (BlackNode.RedRedNode (RedNode (left, right, value), rightTop, valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
-                | AdditionResult.NeedsRebalance info ->
+                | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionRedResult.Red (RedNode (left, right, value)) ->
+                    AdditionBlackResult.Black (BlackNode.RedRedNode (RedNode (left, right, value), rightTop, valueTop))
+                | AdditionRedResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
+                | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.BlackBlackNode (info.Left, info.Middle, ValueAtDepth.collapse info.Lower),
                          BlackNode.BlackRedNode (info.Right, rightTop, valueTop),
                          ValueAtDepth.collapse info.Upper)
-                    |> AdditionResult.Red
+                    |> AdditionBlackResult.Red
             else
                 match addRed rightTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red (RedNode (left, right, value)) ->
-                    AdditionResult.Black (BlackNode.RedRedNode (leftTop, RedNode (left, right, value), valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
-                | AdditionResult.NeedsRebalance info ->
+                | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionRedResult.Red (RedNode (left, right, value)) ->
+                    AdditionBlackResult.Black (BlackNode.RedRedNode (leftTop, RedNode (left, right, value), valueTop))
+                | AdditionRedResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
+                | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.RedBlackNode (leftTop, info.Left, valueTop),
                          BlackNode.BlackBlackNode (info.Middle, info.Right, ValueAtDepth.collapse info.Upper),
                          ValueAtDepth.collapse info.Lower)
-                    |> AdditionResult.Red
+                    |> AdditionBlackResult.Red
         | BlackNode.BlackRedNode (leftTop, rightTop, valueTop) ->
             if elt = fst (ValueAtDepth.value valueTop) then
-                AdditionResult.AlreadyPresent
+                AdditionBlackResult.AlreadyPresent
             elif elt < fst (ValueAtDepth.value valueTop) then
                 match addBlack leftTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red redNode ->
-                    AdditionResult.Black (BlackNode.RedRedNode (redNode, rightTop, valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
-                | AdditionResult.NeedsRebalance info ->
-                    RedNode
-                        (BlackNode.BlackBlackNode (info.Left, info.Middle, ValueAtDepth.collapse info.Lower),
-                         BlackNode.BlackRedNode (info.Right, rightTop, valueTop),
-                         ValueAtDepth.collapse info.Upper)
-                    |> AdditionResult.Red
+                | AdditionBlackResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionBlackResult.Red redNode ->
+                    AdditionBlackResult.Black (BlackNode.RedRedNode (redNode, rightTop, valueTop))
+                | AdditionBlackResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackRedNode (blackNode, rightTop, valueTop))
             else
                 match addRed rightTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red redNode ->
-                    AdditionResult.Black (BlackNode.BlackRedNode (leftTop, redNode, valueTop))
-                | AdditionResult.Black blackNode ->
+                | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionRedResult.Red redNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackRedNode (leftTop, redNode, valueTop))
+                | AdditionRedResult.Black blackNode ->
                     // TODO - we could do this as a red node if we bumped the depth
-                    AdditionResult.Black (BlackNode.BlackBlackNode (leftTop, blackNode, valueTop))
-                | AdditionResult.NeedsRebalance info ->
+                    AdditionBlackResult.Black (BlackNode.BlackBlackNode (leftTop, blackNode, valueTop))
+                | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.BlackBlackNode (leftTop, info.Left, valueTop),
                          BlackNode.BlackBlackNode (info.Middle, info.Right, ValueAtDepth.collapse info.Upper),
                          ValueAtDepth.collapse info.Lower)
-                    |> AdditionResult.Red
+                    |> AdditionBlackResult.Red
         | BlackNode.RedBlackNode (leftTop, rightTop, valueTop) ->
             if elt = fst (ValueAtDepth.value valueTop) then
-                AdditionResult.AlreadyPresent
+                AdditionBlackResult.AlreadyPresent
             elif elt < fst (ValueAtDepth.value valueTop) then
                 match addRed leftTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red redNode ->
-                    AdditionResult.Black (BlackNode.RedBlackNode (redNode, rightTop, valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.BlackBlackNode (blackNode, rightTop, valueTop))
-                | AdditionResult.NeedsRebalance info ->
+                | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionRedResult.Red redNode ->
+                    AdditionBlackResult.Black (BlackNode.RedBlackNode (redNode, rightTop, valueTop))
+                | AdditionRedResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackBlackNode (blackNode, rightTop, valueTop))
+                | AdditionRedResult.NeedsRebalance info ->
                     RedNode
                         (BlackNode.BlackBlackNode (info.Left, info.Middle, ValueAtDepth.collapse info.Lower),
                          BlackNode.BlackBlackNode (info.Right, rightTop, valueTop),
                          ValueAtDepth.collapse info.Upper)
-                    |> AdditionResult.Red
+                    |> AdditionBlackResult.Red
             else
                 match addBlack rightTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red redNode -> AdditionResult.Black (BlackNode.RedRedNode (leftTop, redNode, valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.RedBlackNode (leftTop, blackNode, valueTop))
-                | AdditionResult.NeedsRebalance info ->
-                    RedNode
-                        (BlackNode.RedBlackNode (leftTop, info.Left, valueTop),
-                         BlackNode.BlackBlackNode (info.Middle, info.Right, ValueAtDepth.collapse info.Upper),
-                         ValueAtDepth.collapse info.Lower)
-                    |> AdditionResult.Red
+                | AdditionBlackResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionBlackResult.Red redNode -> AdditionBlackResult.Black (BlackNode.RedRedNode (leftTop, redNode, valueTop))
+                | AdditionBlackResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.RedBlackNode (leftTop, blackNode, valueTop))
         | BlackNode.BlackBlackNode (leftTop, rightTop, valueTop) ->
             if elt = fst (ValueAtDepth.value valueTop) then
-                AdditionResult.AlreadyPresent
+                AdditionBlackResult.AlreadyPresent
             elif elt < fst (ValueAtDepth.value valueTop) then
                 match addBlack leftTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red redNode ->
-                    AdditionResult.Black (BlackNode.RedBlackNode (redNode, rightTop, valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.BlackBlackNode (blackNode, rightTop, valueTop))
-                | AdditionResult.NeedsRebalance info -> failwith ""
+                | AdditionBlackResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionBlackResult.Red redNode ->
+                    AdditionBlackResult.Black (BlackNode.RedBlackNode (redNode, rightTop, valueTop))
+                | AdditionBlackResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackBlackNode (blackNode, rightTop, valueTop))
             else
                 match addBlack rightTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red redNode ->
-                    AdditionResult.Black (BlackNode.BlackRedNode (leftTop, redNode, valueTop))
-                | AdditionResult.Black blackNode ->
-                    AdditionResult.Black (BlackNode.BlackBlackNode (leftTop, blackNode, valueTop))
-                | AdditionResult.NeedsRebalance info -> failwith ""
+                | AdditionBlackResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
+                | AdditionBlackResult.Red redNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackRedNode (leftTop, redNode, valueTop))
+                | AdditionBlackResult.Black blackNode ->
+                    AdditionBlackResult.Black (BlackNode.BlackBlackNode (leftTop, blackNode, valueTop))
 
     and private addRed<'a, 'v, 'depth when 'a : comparison>
         (parent : RedNode<'a, 'v, 'depth>)
         (elt : 'a)
         (value : 'v)
-        : AdditionResult<'a, 'v, 'depth>
+        : AdditionRedResult<'a, 'v, 'depth>
         =
         match parent with
         | RedNode (leftTop, rightTop, valueTop) ->
             if elt < fst (ValueAtDepth.value valueTop) then
                 match addBlack leftTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red (RedNode (left, right, value)) ->
+                | AdditionBlackResult.AlreadyPresent -> AdditionRedResult.AlreadyPresent
+                | AdditionBlackResult.Red (RedNode (left, right, value)) ->
                     {|
                         Upper = valueTop
                         Lower = value
@@ -202,12 +193,11 @@ module RedBlackTree =
                         Right = rightTop
                     |}
                     |> NeedsRebalance
-                | AdditionResult.Black blackNode -> AdditionResult.Red (RedNode (blackNode, rightTop, valueTop))
-                | AdditionResult.NeedsRebalance info -> failwith ""
+                | AdditionBlackResult.Black blackNode -> AdditionRedResult.Red (RedNode (blackNode, rightTop, valueTop))
             elif elt > fst (ValueAtDepth.value valueTop) then
                 match addBlack rightTop elt value with
-                | AdditionResult.AlreadyPresent -> AdditionResult.AlreadyPresent
-                | AdditionResult.Red (RedNode (left, right, value)) ->
+                | AdditionBlackResult.AlreadyPresent -> AdditionRedResult.AlreadyPresent
+                | AdditionBlackResult.Red (RedNode (left, right, value)) ->
                     {|
                         Upper = value
                         Lower = valueTop
@@ -216,25 +206,30 @@ module RedBlackTree =
                         Right = right
                     |}
                     |> NeedsRebalance
-                | AdditionResult.Black blackNode -> AdditionResult.Red (RedNode (leftTop, blackNode, valueTop))
-                | AdditionResult.NeedsRebalance info -> failwith ""
+                | AdditionBlackResult.Black blackNode -> AdditionRedResult.Red (RedNode (leftTop, blackNode, valueTop))
             else
-                AdditionResult.AlreadyPresent
+                AdditionRedResult.AlreadyPresent
 
     let add<'a, 'v when 'a : comparison> (elt : 'a) (value : 'v) (tree : RedBlackTree<'a, 'v>) : RedBlackTree<'a, 'v> =
         match tree with
-        | RedBlackTree.RedRoot node -> addRed node elt value
-        | RedBlackTree.BlackRoot node -> addBlack node elt value
-        |> function
-        | AdditionResult.AlreadyPresent -> tree
-        | AdditionResult.Black node -> RedBlackTree.BlackRoot node
-        | AdditionResult.Red node -> RedBlackTree.RedRoot node
-        | AdditionResult.NeedsRebalance info ->
-            BlackNode.RedBlackNode
-                (RedNode.RedNode (elevateBlack info.Left, elevateBlack info.Middle, ValueAtDepth.elevate info.Lower),
-                 elevateBlack info.Right,
-                 info.Upper)
-            |> RedBlackTree.BlackRoot
+        | RedBlackTree.RedRoot node ->
+            addRed node elt value
+            |> function
+            | AdditionRedResult.AlreadyPresent -> tree
+            | AdditionRedResult.Black node -> RedBlackTree.BlackRoot node
+            | AdditionRedResult.Red node -> RedBlackTree.RedRoot node
+            | AdditionRedResult.NeedsRebalance info ->
+                BlackNode.RedBlackNode
+                    (RedNode.RedNode (elevateBlack info.Left, elevateBlack info.Middle, ValueAtDepth.elevate info.Lower),
+                     elevateBlack info.Right,
+                     info.Upper)
+                |> RedBlackTree.BlackRoot
+        | RedBlackTree.BlackRoot node ->
+            addBlack node elt value
+            |> function
+            | AdditionBlackResult.AlreadyPresent -> tree
+            | AdditionBlackResult.Black node -> RedBlackTree.BlackRoot node
+            | AdditionBlackResult.Red node -> RedBlackTree.RedRoot node
 
     let rec private tryFindBlack<'a, 'v, 'depth when 'a : comparison>
         (tree : BlackNode<'a, 'v, 'depth>)
