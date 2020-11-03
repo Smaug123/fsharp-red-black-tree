@@ -1,29 +1,31 @@
 ﻿namespace RedBlackTree
 
-type Zero = private | Zero
-type 'a Succ = private | Succ
+[<Measure>]
+type Zero
+[<Measure>]
+type Succ
 
 [<Struct>]
-type ValueAtDepth<'a, 'depth> = ValueAtDepth of 'a
+type ValueAtDepth<'a, [<Measure>]'depth> = ValueAtDepth of 'a
 
 [<RequireQualifiedAccess>]
 module internal ValueAtDepth =
     let inline value (ValueAtDepth a) = a
 
-    let inline elevate<'a, 'depth> (ValueAtDepth a : ValueAtDepth<'a, 'depth>) : ValueAtDepth<'a, Succ<'depth>> =
+    let inline elevate<'a, [<Measure>]'depth> (ValueAtDepth a : ValueAtDepth<'a, 'depth>) : ValueAtDepth<'a, Succ * 'depth> =
         ValueAtDepth a
 
-    let inline collapse<'a, 'depth> (ValueAtDepth a : ValueAtDepth<'a, Succ<'depth>>) : ValueAtDepth<'a, 'depth> =
+    let inline collapse<'a, [<Measure>]'depth> (ValueAtDepth a : ValueAtDepth<'a, Succ * 'depth>) : ValueAtDepth<'a, 'depth> =
         ValueAtDepth a
 
-type private RedNode<'a, 'v, 'depth when 'a : comparison> = RedNode of BlackNode<'a, 'v, 'depth> * BlackNode<'a, 'v, 'depth> * ValueAtDepth<'a * 'v, 'depth>
+type private RedNode<'a, 'v, [<Measure>]'depth when 'a : comparison> = RedNode of BlackNode<'a, 'v, 'depth> * BlackNode<'a, 'v, 'depth> * ValueAtDepth<'a * 'v, 'depth>
 
-and [<RequireQualifiedAccess>] private BlackNode<'a, 'v, 'depth when 'a : comparison> =
+and [<RequireQualifiedAccess>] private BlackNode<'a, 'v, [<Measure>]'depth when 'a : comparison> =
     | Leaf
-    | RedRedNode of RedNode<'a, 'v, Succ<'depth>> * RedNode<'a, 'v, Succ<'depth>> * ValueAtDepth<'a * 'v, 'depth>
-    | RedBlackNode of RedNode<'a, 'v, Succ<'depth>> * BlackNode<'a, 'v, Succ<'depth>> * ValueAtDepth<'a * 'v, 'depth>
-    | BlackRedNode of BlackNode<'a, 'v, Succ<'depth>> * RedNode<'a, 'v, Succ<'depth>> * ValueAtDepth<'a * 'v, 'depth>
-    | BlackBlackNode of BlackNode<'a, 'v, Succ<'depth>> * BlackNode<'a, 'v, Succ<'depth>> * ValueAtDepth<'a * 'v, 'depth>
+    | RedRedNode of RedNode<'a, 'v, Succ * 'depth> * RedNode<'a, 'v, Succ * 'depth> * ValueAtDepth<'a * 'v, 'depth>
+    | RedBlackNode of RedNode<'a, 'v, Succ * 'depth> * BlackNode<'a, 'v, Succ * 'depth> * ValueAtDepth<'a * 'v, 'depth>
+    | BlackRedNode of BlackNode<'a, 'v, Succ * 'depth> * RedNode<'a, 'v, Succ * 'depth> * ValueAtDepth<'a * 'v, 'depth>
+    | BlackBlackNode of BlackNode<'a, 'v, Succ * 'depth> * BlackNode<'a, 'v, Succ * 'depth> * ValueAtDepth<'a * 'v, 'depth>
 
 [<RequireQualifiedAccess>]
 type RedBlackTree<'a, 'v when 'a : comparison> =
@@ -37,44 +39,32 @@ module RedBlackTree =
     /// A red-black tree holding no data.
     let empty<'a, 'v when 'a : comparison> : RedBlackTree<'a, 'v> = RedBlackTree.BlackRoot (BlackNode.Leaf)
 
-    let rec private elevateBlack<'a, 'v, 'depth when 'a : comparison>
+    let rec private elevateBlack<'a, 'v, [<Measure>]'depth when 'a : comparison>
         (node : BlackNode<'a, 'v, 'depth>)
-        : BlackNode<'a, 'v, Succ<'depth>>
+        : BlackNode<'a, 'v, Succ * 'depth>
         =
-        match node with
-        | BlackNode.Leaf -> BlackNode.Leaf
-        | BlackNode.BlackBlackNode (left, right, value) ->
-            BlackNode.BlackBlackNode (elevateBlack left, elevateBlack right, ValueAtDepth.elevate value)
-        | BlackNode.RedBlackNode (left, right, value) ->
-            BlackNode.RedBlackNode (elevateRed left, elevateBlack right, ValueAtDepth.elevate value)
-        | BlackNode.RedRedNode (left, right, value) ->
-            BlackNode.RedRedNode (elevateRed left, elevateRed right, ValueAtDepth.elevate value)
-        | BlackNode.BlackRedNode (left, right, value) ->
-            BlackNode.BlackRedNode (elevateBlack left, elevateRed right, ValueAtDepth.elevate value)
+        unbox node
 
-    and private elevateRed<'a, 'v, 'depth when 'a : comparison>
-        (node : RedNode<'a, 'v, 'depth>)
-        : RedNode<'a, 'v, Succ<'depth>>
-        =
-        match node with
-        | RedNode.RedNode (left, right, value) ->
-            RedNode.RedNode (elevateBlack left, elevateBlack right, ValueAtDepth.elevate value)
+    type private Rebalance<'a, 'v, [<Measure>]'depth when 'a : comparison> =
+        {
+            Upper : ValueAtDepth<'a * 'v, 'depth>
+            Lower : ValueAtDepth<'a * 'v, 'depth>
+            Left : BlackNode<'a, 'v, 'depth>
+            Middle : BlackNode<'a, 'v, 'depth>
+            Right : BlackNode<'a, 'v, 'depth>
+        }
 
-    type private AdditionRedResult<'a, 'v, 'depth when 'a : comparison> =
+    type private AdditionRedResult<'a, 'v, [<Measure>]'depth when 'a : comparison> =
         | AlreadyPresent
         | Red of RedNode<'a, 'v, 'depth>
-        | NeedsRebalance of {| Upper : ValueAtDepth<'a * 'v, 'depth>
-                               Lower : ValueAtDepth<'a * 'v, 'depth>
-                               Left : BlackNode<'a, 'v, 'depth>
-                               Middle : BlackNode<'a, 'v, 'depth>
-                               Right : BlackNode<'a, 'v, 'depth> |}
+        | NeedsRebalance of Rebalance<'a, 'v, 'depth>
 
-    type private AdditionBlackResult<'a, 'v, 'depth when 'a : comparison> =
+    type private AdditionBlackResult<'a, 'v, [<Measure>]'depth when 'a : comparison> =
         | AlreadyPresent
         | Red of RedNode<'a, 'v, 'depth>
         | Black of BlackNode<'a, 'v, 'depth>
 
-    let rec private addBlack<'a, 'v, 'depth when 'a : comparison>
+    let rec private addBlack<'a, 'v, [<Measure>]'depth when 'a : comparison>
         (parent : BlackNode<'a, 'v, 'depth>)
         (elt : 'a)
         (value : 'v)
@@ -87,7 +77,7 @@ module RedBlackTree =
             if elt = fst (ValueAtDepth.value valueTop) then
                 AdditionBlackResult.AlreadyPresent
             elif elt < fst (ValueAtDepth.value valueTop) then
-                match addRed<'a, 'v, Succ<'depth>> leftTop elt value with
+                match addRed leftTop elt value with
                 | AdditionRedResult.AlreadyPresent -> AdditionBlackResult.AlreadyPresent
                 | AdditionRedResult.Red (RedNode (left, right, value)) ->
                     AdditionBlackResult.Black (BlackNode.RedRedNode (RedNode (left, right, value), rightTop, valueTop))
@@ -168,7 +158,7 @@ module RedBlackTree =
                 | AdditionBlackResult.Black blackNode ->
                     AdditionBlackResult.Black (BlackNode.BlackBlackNode (leftTop, blackNode, valueTop))
 
-    and private addRed<'a, 'v, 'depth when 'a : comparison>
+    and private addRed<'a, 'v, [<Measure>]'depth when 'a : comparison>
         (parent : RedNode<'a, 'v, 'depth>)
         (elt : 'a)
         (value : 'v)
@@ -180,27 +170,27 @@ module RedBlackTree =
                 match addBlack leftTop elt value with
                 | AdditionBlackResult.AlreadyPresent -> AdditionRedResult.AlreadyPresent
                 | AdditionBlackResult.Red (RedNode (left, right, value)) ->
-                    {|
-                        Upper = valueTop
-                        Lower = value
-                        Left = left
-                        Middle = right
-                        Right = rightTop
-                    |}
-                    |> NeedsRebalance
+                    NeedsRebalance
+                        {
+                            Upper = valueTop
+                            Lower = value
+                            Left = left
+                            Middle = right
+                            Right = rightTop
+                        }
                 | AdditionBlackResult.Black blackNode -> AdditionRedResult.Red (RedNode (blackNode, rightTop, valueTop))
             elif elt > fst (ValueAtDepth.value valueTop) then
                 match addBlack rightTop elt value with
                 | AdditionBlackResult.AlreadyPresent -> AdditionRedResult.AlreadyPresent
                 | AdditionBlackResult.Red (RedNode (left, right, value)) ->
-                    {|
-                        Upper = value
-                        Lower = valueTop
-                        Left = leftTop
-                        Middle = left
-                        Right = right
-                    |}
-                    |> NeedsRebalance
+                    NeedsRebalance
+                        {
+                            Upper = value
+                            Lower = valueTop
+                            Left = leftTop
+                            Middle = left
+                            Right = right
+                        }
                 | AdditionBlackResult.Black blackNode -> AdditionRedResult.Red (RedNode (leftTop, blackNode, valueTop))
             else
                 AdditionRedResult.AlreadyPresent
@@ -225,7 +215,7 @@ module RedBlackTree =
             | AdditionBlackResult.Black node -> RedBlackTree.BlackRoot node
             | AdditionBlackResult.Red node -> RedBlackTree.RedRoot node
 
-    let rec private tryFindBlack<'a, 'v, 'depth when 'a : comparison>
+    let rec private tryFindBlack<'a, 'v, [<Measure>]'depth when 'a : comparison>
         (tree : BlackNode<'a, 'v, 'depth>)
         (elt : 'a)
         : 'v option
@@ -249,7 +239,7 @@ module RedBlackTree =
             elif elt < fst (ValueAtDepth.value value) then tryFindBlack left elt
             else tryFindBlack right elt
 
-    and private tryFindRed<'a, 'v, 'depth when 'a : comparison> (tree : RedNode<'a, 'v, 'depth>) (elt : 'a) : 'v option =
+    and private tryFindRed<'a, 'v, [<Measure>]'depth when 'a : comparison> (tree : RedNode<'a, 'v, 'depth>) (elt : 'a) : 'v option =
         match tree with
         | RedNode (left, right, value) ->
             if elt = fst (ValueAtDepth.value value) then Some (snd (ValueAtDepth.value value))
@@ -261,7 +251,7 @@ module RedBlackTree =
         | RedBlackTree.BlackRoot root -> tryFindBlack root elt
         | RedBlackTree.RedRoot root -> tryFindRed root elt
 
-    let rec private foldBlack<'a, 'v, 'state, 'depth when 'a : comparison>
+    let rec private foldBlack<'a, 'v, 'state, [<Measure>]'depth when 'a : comparison>
         (folder : 'state -> ('a * 'v) -> 'state)
         (state : 'state)
         (tree : BlackNode<'a, 'v, 'depth>)
@@ -286,7 +276,7 @@ module RedBlackTree =
             let state = folder state (ValueAtDepth.value value)
             foldBlack folder state right
 
-    and private foldRed<'a, 'v, 'state, 'depth when 'a : comparison>
+    and private foldRed<'a, 'v, 'state, [<Measure>]'depth when 'a : comparison>
         (folder : 'state -> ('a * 'v) -> 'state)
         (state : 'state)
         (tree : RedNode<'a, 'v, 'depth>)
@@ -312,7 +302,7 @@ module RedBlackTree =
     let toListRev<'a, 'v when 'a : comparison> (tree : RedBlackTree<'a, 'v>) : ('a * 'v) list =
         fold (fun ls a -> a :: ls) [] tree
 
-    let rec private toSeqBlack<'a, 'v, 'depth when 'a : comparison> (tree : BlackNode<'a, 'v, 'depth>) : ('a * 'v) seq =
+    let rec private toSeqBlack<'a, 'v, [<Measure>]'depth when 'a : comparison> (tree : BlackNode<'a, 'v, 'depth>) : ('a * 'v) seq =
         seq {
             match tree with
             | BlackNode.Leaf -> ()
@@ -334,7 +324,7 @@ module RedBlackTree =
                 yield! toSeqRed right
         }
 
-    and private toSeqRed<'a, 'v, 'depth when 'a : comparison> (tree : RedNode<'a, 'v, 'depth>) : ('a * 'v) seq =
+    and private toSeqRed<'a, 'v, [<Measure>]'depth when 'a : comparison> (tree : RedNode<'a, 'v, 'depth>) : ('a * 'v) seq =
         seq {
             match tree with
             | RedNode.RedNode (left, right, value) ->
@@ -348,7 +338,7 @@ module RedBlackTree =
         | RedBlackTree.RedRoot root -> toSeqRed root
         | RedBlackTree.BlackRoot root -> toSeqBlack root
 
-    let rec private balanceFactorBlack<'a, 'v, 'depth when 'a : comparison> (node : BlackNode<'a, 'v, 'depth>) : int * int =
+    let rec private balanceFactorBlack<'a, 'v, [<Measure>]'depth when 'a : comparison> (node : BlackNode<'a, 'v, 'depth>) : int * int =
         match node with
         | BlackNode.Leaf -> 0, 0
         | BlackNode.BlackBlackNode (left, right, _) ->
@@ -369,7 +359,7 @@ module RedBlackTree =
             (min min1 min2, max max1 max2)
         |> fun (a, b) -> (a + 1, b + 1)
 
-    and private balanceFactorRed<'a, 'v, 'depth when 'a : comparison> (node : RedNode<'a, 'v, 'depth>) : int * int =
+    and private balanceFactorRed<'a, 'v, [<Measure>]'depth when 'a : comparison> (node : RedNode<'a, 'v, 'depth>) : int * int =
         match node with
         | RedNode (left, right, _) ->
             let (min1, max1) = balanceFactorBlack left
